@@ -1,0 +1,80 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import os
+from dotenv import load_dotenv
+import requests
+
+# load variables from .env
+load_dotenv()
+
+API_KEY = os.getenv("API_KEY")
+Base_URL = "https://studio-rag-backend.onrender.com/api/v1"
+
+app = Flask(__name__)
+CORS(app)
+
+## 1. POST `/api/v1/monologues`
+@app.route("/monologues", methods=["POST"])
+def monologues():
+    upstream_url = f"{Base_URL}/monologues"
+    resp = requests.post(
+        upstream_url,
+        headers={"Content-Type": "application/json", "x-api-key": API_KEY},
+        json=request.get_json(silent=True) or {}
+    )
+    return (resp.text, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+
+## 2. GET `/api/v1/personalities`
+@app.route("/personalities", methods=["GET"])
+def personalities():
+    upstream_url = f"{Base_URL}/personalities"
+    resp = requests.get(
+        upstream_url,
+        headers={"x-api-key": API_KEY},
+        params=request.args
+    )
+    return (resp.text, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+
+## 3. GET `/api/v1/personalities/<personality_type_id>`
+@app.route("/personalities/<personality_type_id>", methods=["GET"])
+def get_personality(personality_type_id):
+    upstream_url = f"{Base_URL}/personalities/{personality_type_id}"
+    resp = requests.get(
+        upstream_url,
+        headers={"Content-Type": "application/json", "x-api-key": API_KEY},
+        params=request.args
+    )
+    return (resp.text, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+
+## 4. GET `/api/v1/snippet-examples`
+@app.route("/snippet-examples", methods=["GET"])
+def snippet_examples():
+    upstream_url = f"{Base_URL}/snippet-examples"
+    resp = requests.get(
+        upstream_url,
+        headers={"x-api-key": API_KEY},
+        params=request.args
+    )
+    return (resp.text, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+
+# --- Test routes ---
+
+@app.get("/health")
+def health():
+    """Quick sanity check route."""
+    return jsonify({
+        "status": "ok",
+        "proxy": "flask",
+        "env_present": bool(API_KEY)  # True if your .env loaded an API_KEY
+    }), 200
+
+@app.post("/echo")
+def echo():
+    """Echo back any JSON you send (tests POST + JSON parsing)."""
+    data = request.get_json(silent=True) or {}
+    return jsonify({
+        "you_sent": data
+    }), 200
+
+if __name__ == "__main__":
+    app.run(port=5000, debug=True)
